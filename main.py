@@ -4,28 +4,54 @@ from ultralytics import YOLO
 # Load YOLO model
 model = YOLO("yolo11n.pt")
 
-# Open webcam
-cap = cv2.VideoCapture(0)
+# Choose input
+# 0 = webcam
+# "videos/test.mp4" = video file
+SOURCE = "videos/test.mp4"
+
+cap = cv2.VideoCapture(SOURCE)
 
 if not cap.isOpened():
-    print("Error: Could not open webcam.")
+    print("Error: Could not open video source.")
     exit()
 
 while True:
     ret, frame = cap.read()
 
     if not ret:
-        print("Error: Could not read frame.")
+        print("Video ended or frame could not be read.")
         break
 
-    # Run YOLO detection
-    results = model(frame, verbose=False)
+    # Object detection + tracking
+    results = model.track(
+        frame,
+        persist=True,
+        tracker="bytetrack.yaml",
+        verbose=False
+    )
 
-    # Draw detections
-    annotated_frame = results[0].plot()
+    # Get result
+    result = results[0]
 
-    # Display
-    cv2.imshow("Object Detection", annotated_frame)
+    # Draw boxes and tracking IDs
+    annotated_frame = result.plot()
+
+    # Count detected objects
+    object_count = len(result.boxes)
+
+    # Display object count
+    cv2.putText(
+        annotated_frame,
+        f"Objects: {object_count}",
+        (20, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 255, 0),
+        2
+    )
+
+    # Display frame
+    cv2.imshow("Object Detection and Tracking", annotated_frame)
 
     # Press Q to quit
     if cv2.waitKey(1) & 0xFF == ord("q"):
